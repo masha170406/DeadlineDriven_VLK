@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 import chromadb
 from chromadb import Documents, EmbeddingFunction, Embeddings
 import litellm
@@ -75,3 +76,28 @@ def get_ai_extraction_with_rag(doctor_note, text_model="mistral/mistral-large-la
     except Exception as e:
         print(f"LiteLLM Error: {e}")
         return {}
+
+
+def parse_asmens_kodas(ak: str):
+    """Extracts birthdate and gender from a valid Lithuanian Personal ID."""
+    if not ak or len(ak) != 11 or not ak.isdigit():
+        return None, None
+
+    g_char = int(ak[0])
+    yy, mm, dd = int(ak[1:3]), int(ak[3:5]), int(ak[5:7])
+
+    gender = "Vyras" if g_char % 2 != 0 else "Moteris"
+
+    if g_char in (1, 2):
+        year = 1800 + yy
+    elif g_char in (3, 4):
+        year = 1900 + yy
+    elif g_char in (5, 6):
+        year = 2000 + yy
+    else:
+        return None, None
+
+    try:
+        return datetime(year, mm, dd).date(), gender
+    except ValueError:
+        return None, None

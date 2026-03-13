@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 from dotenv import load_dotenv
 
-from rag_backend import get_ai_extraction_with_rag
+from rag_backend import get_ai_extraction_with_rag, parse_asmens_kodas
 
 load_dotenv()
 
@@ -81,6 +81,17 @@ with st.container():
                     for key in extracted:
                         if key in st.session_state["field_data"]:
                             st.session_state["field_data"][key] = extracted[key]
+
+                    # --- NEW: Auto-calculate Birthdate and Gender ---
+                    ak = st.session_state["field_data"].get("asm_kodas", "")
+                    if ak:
+                        b_date, gender = parse_asmens_kodas(ak)
+                        if b_date:
+                            st.session_state["field_data"]["gimimo_data"] = b_date
+                        if gender:
+                            st.session_state["field_data"]["lytis"] = gender
+                    # ------------------------------------------------
+
                     st.success(
                         "Forma sėkmingai užpildyta! Peržiūrėkite duomenis žemiau."
                     )
@@ -106,9 +117,21 @@ with st.form("pretty_medical_form"):
         st.text_input(
             "Pavardė (11.0)", value=st.session_state["field_data"].get("pavarde", "")
         )
-        st.date_input("Gimimo data", value=None, format="YYYY-MM-DD")
+        # Updated Birthdate field
+        st.date_input(
+            "Gimimo data",
+            value=st.session_state["field_data"].get("gimimo_data", None),
+            format="YYYY-MM-DD",
+        )
     with a3:
-        st.radio("Lytis", ["Vyras", "Moteris"], horizontal=True)
+        # Updated Gender field
+        gender_val = st.session_state["field_data"].get("lytis", "Vyras")
+        st.radio(
+            "Lytis",
+            ["Vyras", "Moteris"],
+            horizontal=True,
+            index=0 if gender_val == "Vyras" else 1,
+        )
         st.selectbox(
             "Draustumo tipas", ["Apdraustas PSD", "ES/EEE draudimas", "Nedraustas"]
         )
