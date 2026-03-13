@@ -1,0 +1,12 @@
+[project]
+name = "deadline_driven_vlk"
+version = "0.1.0"
+description = "AI automation system for VLK form filling"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pandas>=2.3.3",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.2",
+    "streamlit>=1.55.0",
+]
