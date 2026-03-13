@@ -1,0 +1,16 @@
+services:
+  health-app:
+    restart: unless-stopped
+    build: .
+    container_name: health_app_container
+    ports:
+      - 8501:8501
+    env_file:
+      - .env
+    volumes:
+      - chroma_data:/app/vlk_chroma_db
+
+# Declare the named volume here
+volumes:
+  chroma_data:
+    name: health_app_volume

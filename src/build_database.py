@@ -2,6 +2,7 @@ import pandas as pd
 import chromadb
 from chromadb import Documents, EmbeddingFunction, Embeddings
 import litellm
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,12 +18,13 @@ class LiteLLMEmbeddingFunction(EmbeddingFunction):
 
 
 def build_vector_db():
-    print("Building Enriched Medical Database...")
+    # Use an absolute path or a path relative to the app root to avoid confusion in Docker
+    db_path = os.path.join(os.getcwd(), "vlk_chroma_db")
+    print(f"Checking database at: {db_path}")
 
     agnostic_ef = LiteLLMEmbeddingFunction(model_name="mistral/mistral-embed")
-    client = chromadb.PersistentClient(path="./vlk_chroma_db")
+    client = chromadb.PersistentClient(path=db_path)
 
-    # CRITICAL: We set the space to 'cosine' to get better discrimination
     tlk_collection = client.get_or_create_collection(
         name="tlk_10_diagnoses",
         embedding_function=agnostic_ef,
@@ -35,29 +37,38 @@ def build_vector_db():
         metadata={"hnsw:space": "cosine"},
     )
 
-    def ingest_csv(csv_filename, collection):
-        df = pd.read_csv(csv_filename)
+    def ingest_csv(csv_path, collection):
+        # IDEMPOTENCY CHECK: If collection has data, skip ingestion
+        if collection.count() > 0:
+            print(
+                f"⚠️ Collection '{collection.name}' already contains {collection.count()} items. Skipping."
+            )
+            return
 
-        docs = []
-        metadatas = []
-        ids = []
+        if not os.path.exists(csv_path):
+            print(f"❌ File not found: {csv_path}")
+            return
+
+        print(f"📥 Ingesting {csv_path}...")
+        df = pd.read_csv(csv_path)
+        docs, metadatas, ids = [], [], []
 
         for _, row in df.iterrows():
             code = str(row["code"])
             title = str(row["description"])
-            # We add a fallback if symptoms are missing
             symptoms = str(row.get("symptoms", ""))
-
-            # Create the 'Super-Document' for high-precision search
-            search_string = f"Kodas: {code}. Pavadinimas: {title}. Raktažodžiai ir požymiai: {symptoms}"
+            search_string = (
+                f"Kodas: {code}. Pavadinimas: {title}. Raktažodžiai: {symptoms}"
+            )
 
             docs.append(search_string)
             metadatas.append({"kodas": code, "pavadinimas": title})
             ids.append(code)
 
         collection.add(documents=docs, metadatas=metadatas, ids=ids)
-        print(f"✅ Ingested {len(ids)} codes into {collection.name}")
+        print(f"✅ Successfully ingested {len(ids)} items.")
 
+    # Paths adjusted for the src/ structure
     ingest_csv("data/top_50_tlk_10_am.csv", tlk_collection)
     ingest_csv("data/top_50_achi.csv", achi_collection)
 
