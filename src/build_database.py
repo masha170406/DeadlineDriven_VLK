@@ -56,7 +56,7 @@ def build_vector_db():
         for _, row in df.iterrows():
             code = str(row["code"])
             title = str(row["description"])
-            symptoms = str(row.get("symptoms", ""))
+            symptoms = str(row["symptoms"])
             search_string = (
                 f"Kodas: {code}. Pavadinimas: {title}. Raktažodžiai: {symptoms}"
             )
@@ -69,8 +69,8 @@ def build_vector_db():
         print(f"✅ Successfully ingested {len(ids)} items.")
 
     # Paths adjusted for the src/ structure
-    ingest_csv("data/top_50_tlk_10_am.csv", tlk_collection)
-    ingest_csv("data/top_50_achi.csv", achi_collection)
+    ingest_csv("data/tlk_10_am.csv", tlk_collection)
+    ingest_csv("data/achi.csv", achi_collection)
 
 
 if __name__ == "__main__":
