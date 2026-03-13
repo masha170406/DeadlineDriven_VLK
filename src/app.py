@@ -7,11 +7,11 @@ from rag_backend import get_ai_extraction_with_rag
 load_dotenv()
 
 # --- MOCK LOGIN SYSTEM ---
-# In a real app, this comes from your authentication system (e.g., OAuth/JWT)
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = "Dr. Jonas Gydytojas"
 
 # --- SESSION STATE ---
+# Updated to include reasoning and confidence score
 if "field_data" not in st.session_state:
     st.session_state["field_data"] = {
         "vardas": "",
@@ -22,6 +22,8 @@ if "field_data" not in st.session_state:
         "diag_statusas": "+",
         "achi_kodas": "",
         "achi_pavadinimas": "",
+        "pasitikejimo_lygis": 0,
+        "paaiskinimas": "",
     }
 
 st.set_page_config(page_title="Digital F025/a-LK Form", page_icon="🏥", layout="wide")
@@ -39,7 +41,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Top Bar with User Info
 cols = st.columns([3, 1])
 with cols[0]:
     st.title("🏥 AI Apsilankymų Statistinė Kortelė")
@@ -60,7 +61,7 @@ with st.container():
         selected_model = "mistral/mistral-large-latest"
         st.success("RAG duomenų bazė pajungta ✔️")
         st.write(
-            "Įklijuokite tekstą, ir AI automatiškai ištrauks paciento duomenis bei priskirs oficialius VLK kodus."
+            "Įklijuokite tekstą, ir AI automatiškai ištrauks duomenis bei įvertins savo patikimumą."
         )
 
     with col_text:
@@ -88,7 +89,6 @@ with st.container():
 
 # --- THE UNIFIED FORM ---
 with st.form("pretty_medical_form"):
-    # ROW 1: Patient Data
     st.markdown(
         '<div class="section-header"><h4>👤 Asmens Duomenys</h4></div>',
         unsafe_allow_html=True,
@@ -106,22 +106,44 @@ with st.form("pretty_medical_form"):
         st.text_input(
             "Pavardė (11.0)", value=st.session_state["field_data"].get("pavarde", "")
         )
-        # Dummy field for visual completeness
         st.date_input("Gimimo data", value=None, format="YYYY-MM-DD")
     with a3:
-        # Dummy fields for visual completeness
         st.radio("Lytis", ["Vyras", "Moteris"], horizontal=True)
         st.selectbox(
             "Draustumo tipas", ["Apdraustas PSD", "ES/EEE draudimas", "Nedraustas"]
         )
 
-    # ROW 2: Medical Data (The RAG Output)
     st.markdown(
         '<div class="section-header"><h4>🩺 Klinikinė Informacija</h4></div>',
         unsafe_allow_html=True,
     )
-    m1, m2 = st.columns(2)
 
+    # --- CONFIDENCE METRICS DISPLAY ---
+    confidence = st.session_state["field_data"].get("pasitikejimo_lygis", 0)
+    reasoning = st.session_state["field_data"].get("paaiskinimas", "")
+
+    if confidence > 0:
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            # Color code the metric based on confidence
+            if confidence >= 85:
+                color = "green"
+            elif confidence >= 60:
+                color = "orange"
+            else:
+                color = "red"
+
+            st.markdown(
+                f"**AI Patikimumas:** <span style='color:{color}; font-size:1.2em; font-weight:bold;'>{confidence}%</span>",
+                unsafe_allow_html=True,
+            )
+            st.progress(confidence / 100.0)
+        with c2:
+            st.info(f"**AI Analizė:** {reasoning}")
+        st.write("")  # Spacer
+    # ---------------------------------
+
+    m1, m2 = st.columns(2)
     with m1:
         st.markdown("**Galutinė Diagnozė (TLK-10-AM)**")
         st.text_input(
@@ -132,7 +154,6 @@ with st.form("pretty_medical_form"):
             value=st.session_state["field_data"].get("diag_pavadinimas", ""),
         )
 
-        # New Field: Diagnosis Status
         status_val = st.session_state["field_data"].get("diag_statusas", "+")
         st.selectbox(
             "Statusas (27.0)",
@@ -140,7 +161,6 @@ with st.form("pretty_medical_form"):
             index=["+", "-", "0"].index(status_val)
             if status_val in ["+", "-", "0"]
             else 0,
-            help="+ (ūminė), - (lėtinė pirmąkart), 0 (lėtinė seniau)",
         )
 
     with m2:
@@ -153,7 +173,6 @@ with st.form("pretty_medical_form"):
             value=st.session_state["field_data"].get("achi_pavadinimas", ""),
         )
 
-    # ROW 3: Meta Data & Submission
     st.markdown(
         '<div class="section-header"><h4>✅ Pateikimas</h4></div>',
         unsafe_allow_html=True,
