@@ -1,10 +1,17 @@
 import streamlit as st
+from datetime import datetime
 from dotenv import load_dotenv
 
 from rag_backend import get_ai_extraction_with_rag
 
 load_dotenv()
 
+# --- MOCK LOGIN SYSTEM ---
+# In a real app, this comes from your authentication system (e.g., OAuth/JWT)
+if "current_user" not in st.session_state:
+    st.session_state["current_user"] = "Dr. Jonas Gydytojas"
+
+# --- SESSION STATE ---
 if "field_data" not in st.session_state:
     st.session_state["field_data"] = {
         "vardas": "",
@@ -12,9 +19,9 @@ if "field_data" not in st.session_state:
         "asm_kodas": "",
         "diag_kodas": "",
         "diag_pavadinimas": "",
+        "diag_statusas": "+",
         "achi_kodas": "",
         "achi_pavadinimas": "",
-        "specialistas": "",
     }
 
 st.set_page_config(page_title="Digital F025/a-LK Form", page_icon="🏥", layout="wide")
@@ -25,32 +32,47 @@ st.markdown(
     .main { background-color: #f8f9fa; }
     .stApp { max-width: 1200px; margin: 0 auto; }
     h1, h2, h3 { color: #1c3d5a; }
-    .stButton>button { width: 100%; background-color: #007bff; color: white; border-radius: 5px; height: 3em; }
+    .stButton>button { width: 100%; background-color: #007bff; color: white; border-radius: 5px; height: 3em; font-weight: bold;}
+    .section-header { margin-top: 2rem; margin-bottom: 1rem; color: #007bff; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem;}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.title("🏥 AI Apsilankymų Statistinė Kortelė")
-st.caption("Forma Nr. 025/a-LK | Model-Agnostic RAG System")
+# Top Bar with User Info
+cols = st.columns([3, 1])
+with cols[0]:
+    st.title("🏥 AI Apsilankymų Statistinė Kortelė")
+    st.caption("Forma Nr. 025/a-LK | Unified Dashboard")
+with cols[1]:
+    st.info(f"👤 Prisijungta: **{st.session_state['current_user']}**")
 
-with st.expander("✨ AI AUTOMATINIS UŽPILDYMAS", expanded=True):
+# --- AI EXTRACTION SECTION ---
+with st.container():
+    st.markdown(
+        '<div class="section-header"><h4>✨ AI Automatinis Užpildymas</h4></div>',
+        unsafe_allow_html=True,
+    )
+
     col_text, col_settings = st.columns([3, 1])
 
     with col_settings:
-        st.subheader("⚙️ Sistemos nustatymai")
         selected_model = "mistral/mistral-large-latest"
-        st.info("Mistral RAG duomenų bazė pajungta ✔️")
+        st.success("RAG duomenų bazė pajungta ✔️")
+        st.write(
+            "Įklijuokite tekstą, ir AI automatiškai ištrauks paciento duomenis bei priskirs oficialius VLK kodus."
+        )
 
     with col_text:
         doc_context = st.text_area(
-            "Įklijuokite gydytojo pastabas arba paciento išrašą:", height=150
+            "Įklijuokite gydytojo pastabas arba paciento išrašą:",
+            height=120,
+            label_visibility="collapsed",
         )
-        if st.button("Analizuoti ir užpildyti formą"):
+
+        if st.button("🚀 Analizuoti ir užpildyti formą"):
             if doc_context:
-                with st.spinner(
-                    f"{selected_model.split('/')[0].upper()} analizuoja tekstą..."
-                ):
+                with st.spinner(f"AI analizuoja tekstą..."):
                     extracted = get_ai_extraction_with_rag(
                         doc_context, text_model=selected_model
                     )
@@ -58,82 +80,102 @@ with st.expander("✨ AI AUTOMATINIS UŽPILDYMAS", expanded=True):
                     for key in extracted:
                         if key in st.session_state["field_data"]:
                             st.session_state["field_data"][key] = extracted[key]
-                    st.success("Forma sėkmingai užpildyta!")
+                    st.success(
+                        "Forma sėkmingai užpildyta! Peržiūrėkite duomenis žemiau."
+                    )
             else:
                 st.warning("Pirma įveskite tekstą.")
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    [
-        "📋 I: Bendroji dalis",
-        "🩺 II: Diagnozės",
-        "🗓️ III: Apsilankymas",
-        "✅ IV: Baigiamoji",
-    ]
-)
-
+# --- THE UNIFIED FORM ---
 with st.form("pretty_medical_form"):
-    with tab1:
-        st.subheader("Asmens Duomenys")
-        a1, a2, a3 = st.columns(3)
-        with a1:
-            st.text_input(
-                "Asmens kodas (7.0)",
-                value=st.session_state["field_data"].get("asm_kodas", ""),
-            )
-            st.text_input(
-                "Vardas (10.0)", value=st.session_state["field_data"].get("vardas", "")
-            )
-        with a2:
-            st.text_input(
-                "Pavardė (11.0)",
-                value=st.session_state["field_data"].get("pavarde", ""),
-            )
+    # ROW 1: Patient Data
+    st.markdown(
+        '<div class="section-header"><h4>👤 Asmens Duomenys</h4></div>',
+        unsafe_allow_html=True,
+    )
+    a1, a2, a3 = st.columns(3)
+    with a1:
+        st.text_input(
+            "Vardas (10.0)", value=st.session_state["field_data"].get("vardas", "")
+        )
+        st.text_input(
+            "Asmens kodas (7.0)",
+            value=st.session_state["field_data"].get("asm_kodas", ""),
+        )
+    with a2:
+        st.text_input(
+            "Pavardė (11.0)", value=st.session_state["field_data"].get("pavarde", "")
+        )
+        # Dummy field for visual completeness
+        st.date_input("Gimimo data", value=None, format="YYYY-MM-DD")
+    with a3:
+        # Dummy fields for visual completeness
+        st.radio("Lytis", ["Vyras", "Moteris"], horizontal=True)
+        st.selectbox(
+            "Draustumo tipas", ["Apdraustas PSD", "ES/EEE draudimas", "Nedraustas"]
+        )
 
-    with tab2:
-        st.subheader("Galutinės (Patikslintos) Diagnozės")
-        g1, g2, g3 = st.columns([1, 1, 2])
-        with g1:
-            st.date_input("Diagnozės data (24.0)")
-        with g2:
-            st.text_input(
-                "TLK-10-AM kodas (25.0)",
-                value=st.session_state["field_data"].get("diag_kodas", ""),
-            )
-        with g3:
-            st.text_input(
-                "Pavadinimas (26.0)",
-                value=st.session_state["field_data"].get("diag_pavadinimas", ""),
-            )
+    # ROW 2: Medical Data (The RAG Output)
+    st.markdown(
+        '<div class="section-header"><h4>🩺 Klinikinė Informacija</h4></div>',
+        unsafe_allow_html=True,
+    )
+    m1, m2 = st.columns(2)
 
-    with tab3:
-        st.subheader("Apsilankymo Informacija")
-        v1, v2, v3 = st.columns(3)
-        with v1:
-            st.date_input("Apsilankymo data (32.0)")
-            st.text_input(
-                "Specialistas (34.0)",
-                value="Gydytojo Vardas",
-            )
+    with m1:
+        st.markdown("**Galutinė Diagnozė (TLK-10-AM)**")
+        st.text_input(
+            "Kodas (25.0)", value=st.session_state["field_data"].get("diag_kodas", "")
+        )
+        st.text_input(
+            "Pavadinimas (26.0)",
+            value=st.session_state["field_data"].get("diag_pavadinimas", ""),
+        )
 
-        st.divider()
-        st.subheader("Intervencijos & Vaistai")
-        iv1, iv2 = st.columns(2)
-        with iv1:
-            st.text_input(
-                "ACHI Kodas (43.0)",
-                value=st.session_state["field_data"].get("achi_kodas", ""),
-            )
-            st.text_input(
-                "ACHI Pavadinimas (44.0)",
-                value=st.session_state["field_data"].get("achi_pavadinimas", ""),
-            )
+        # New Field: Diagnosis Status
+        status_val = st.session_state["field_data"].get("diag_statusas", "+")
+        st.selectbox(
+            "Statusas (27.0)",
+            ["+", "-", "0"],
+            index=["+", "-", "0"].index(status_val)
+            if status_val in ["+", "-", "0"]
+            else 0,
+            help="+ (ūminė), - (lėtinė pirmąkart), 0 (lėtinė seniau)",
+        )
 
-    with tab4:
-        st.subheader("Pateikimas")
-        st.date_input("Baigta pildyti: Data/Laikas (60.0)")
+    with m2:
+        st.markdown("**Intervencija / Procedūra (ACHI)**")
+        st.text_input(
+            "Kodas (43.0)", value=st.session_state["field_data"].get("achi_kodas", "")
+        )
+        st.text_input(
+            "Pavadinimas (44.0)",
+            value=st.session_state["field_data"].get("achi_pavadinimas", ""),
+        )
+
+    # ROW 3: Meta Data & Submission
+    st.markdown(
+        '<div class="section-header"><h4>✅ Pateikimas</h4></div>',
+        unsafe_allow_html=True,
+    )
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        st.date_input("Apsilankymo data", format="YYYY-MM-DD")
+    with f2:
+        st.text_input(
+            "Atsakingas Specialistas",
+            value=st.session_state["current_user"],
+            disabled=True,
+        )
+    with f3:
+        st.text_input(
+            "Pateikimo laikas",
+            value=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            disabled=True,
+        )
 
     st.markdown("---")
-    submitted = st.form_submit_button("📁 Išsaugoti skaitmeninį įrašą")
+    submitted = st.form_submit_button("📁 Išsaugoti ir siųsti į E.sveikatą")
 
 if submitted:
     st.balloons()
