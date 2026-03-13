@@ -4,7 +4,7 @@ services:
     build: .
     container_name: health_app_container
     ports:
-      - 8501:8501
+      - ${PORT}:8501
     env_file:
       - .env
     volumes:
