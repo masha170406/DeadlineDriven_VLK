@@ -1,45 +1,88 @@
 import streamlit as st
+import litellm
 from datetime import datetime
+from dotenv import load_dotenv
+import os
+import json
 
-# Page Configuration
+# --- 1. KONFIGŪRACIJA IR AI LOGIKA ---
+load_dotenv()
+
+def get_ai_extraction(context):
+    """
+    Vienas iškvietimas į Mistral, kad ištrauktų visus pagrindinius laukus JSON formatu.
+    Tai sutaupo laiko ir pinigų hackathon'o metu.
+    """
+    prompt = f"""
+    Iš šio medicininio teksto ištrauk informaciją formos užpildymui. 
+    Atsakyk TIK grynu JSON formatu.
+    Tekstas: {context}
+    
+    Laukai:
+    - vardas (Vardas)
+    - pavarde (Pavardė)
+    - asm_kodas (Asmens kodas)
+    - diag_kodas (TLK-10-AM kodas)
+    - diag_pavadinimas (Diagnozės pavadinimas)
+    - specialistas (Gydytojas)
+    """
+    
+    try:
+        response = litellm.completion(
+            model="mistral/mistral-large-latest",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={ "type": "json_object" }
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        st.error(f"AI klaida: {e}")
+        return {}
+
+# --- 2. SESIJOS BŪSENA (Session State) ---
+# Čia saugome duomenis, kad jie "gyventų" tarp puslapio persikrovimų
+if 'field_data' not in st.session_state:
+    st.session_state['field_data'] = {
+        "vardas": "", "pavarde": "", "asm_kodas": "",
+        "diag_kodas": "", "diag_pavadinimas": "", "specialistas": ""
+    }
+
+# --- 3. PUSLAPIO NUSTATYMAI IR CSS ---
 st.set_page_config(
     page_title="Digital F025/a-LK Form",
     page_icon="🏥",
     layout="wide"
 )
 
-# Custom CSS for a cleaner, modern look
 st.markdown("""
     <style>
-    .main {
-        background-color: #f8f9fa;
-    }
-    .stApp {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    h1, h2, h3 {
-        color: #1c3d5a;
-    }
-    .stButton>button {
-        width: 100%;
-        background-color: #007bff;
-        color: white;
-        border-radius: 5px;
-        height: 3em;
-    }
+    .main { background-color: #f8f9fa; }
+    .stApp { max-width: 1200px; margin: 0 auto; }
+    h1, h2, h3 { color: #1c3d5a; }
+    .stButton>button { width: 100%; background-color: #007bff; color: white; border-radius: 5px; height: 3em; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏥 Apsilankymų Statistinė Kortelė")
-st.caption("Forma Nr. 025/a-LK | Patvirtinta LR SAM įsakymu Nr. V-39")
+st.title("🏥 AI Apsilankymų Statistinė Kortelė")
+st.caption("Forma Nr. 025/a-LK | Autofill RAG System")
 
-# Use Tabs to organize the parts without changing the internal field structure
+# --- 4. RAG ĮVESTIES SEKCIJA ---
+with st.expander("✨ AI AUTOMATINIS UŽPILDYMAS", expanded=True):
+    doc_context = st.text_area("Įklijuokite gydytojo pastabas arba paciento išrašą:")
+    if st.button("Analizuoti ir užpildyti formą"):
+        if doc_context:
+            with st.spinner("Mistral AI analizuoja tekstą..."):
+                extracted = get_ai_extraction(doc_context)
+                # Atnaujiname sesijos būseną
+                for key in extracted:
+                    if key in st.session_state['field_data']:
+                        st.session_state['field_data'][key] = extracted[key]
+                st.success("Forma paruošta peržiūrai!")
+        else:
+            st.warning("Pirma įveskite tekstą.")
+
+# --- 5. FORMA ---
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📋 I: Bendroji dalis", 
-    "🩺 II: Diagnozės", 
-    "🗓️ III: Apsilankymas", 
-    "✅ IV: Baigiamoji"
+    "📋 I: Bendroji dalis", "🩺 II: Diagnozės", "🗓️ III: Apsilankymas", "✅ IV: Baigiamoji"
 ])
 
 with st.form("pretty_medical_form"):
@@ -61,12 +104,12 @@ with st.form("pretty_medical_form"):
         st.subheader("Asmens Duomenys")
         a1, a2, a3 = st.columns(3)
         with a1:
-            st.text_input("Asmens kodas (7.0)")
-            st.text_input("Vardas (10.0)")
+            st.text_input("Asmens kodas (7.0)", value=st.session_state['field_data']['asm_kodas'])
+            st.text_input("Vardas (10.0)", value=st.session_state['field_data']['vardas'])
             st.date_input("Gimimo data (13.0)", min_value=datetime(1900, 1, 1))
         with a2:
             st.text_input("Motinos asm. kodas (8.0)")
-            st.text_input("Pavardė (11.0)")
+            st.text_input("Pavardė (11.0)", value=st.session_state['field_data']['pavarde'])
             st.radio("Lytis (14.0)", ["Vyras", "Moteris"], horizontal=True)
         with a3:
             st.text_input("DIK (9.0)")
@@ -89,9 +132,9 @@ with st.form("pretty_medical_form"):
         with g1:
             st.date_input("Diagnozės data (24.0)")
         with g2:
-            st.text_input("TLK-10-AM kodas (25.0)")
+            st.text_input("TLK-10-AM kodas (25.0)", value=st.session_state['field_data']['diag_kodas'])
         with g3:
-            st.text_input("Pavadinimas (26.0)")
+            st.text_input("Pavadinimas (26.0)", value=st.session_state['field_data']['diag_pavadinimas'])
         
         st.selectbox("Statusas (27.0)", ["+", "-", "0"], help="+ (ūminė), - (lėtinė pirmąkart), 0 (lėtinė seniau)")
         st.text_area("Traumos priežastis (28.0)")
@@ -101,7 +144,7 @@ with st.form("pretty_medical_form"):
         v1, v2, v3 = st.columns(3)
         with v1:
             st.date_input("Apsilankymo data (32.0)")
-            st.text_input("Specialistas (34.0)")
+            st.text_input("Specialistas (34.0)", value=st.session_state['field_data']['specialistas'])
         with v2:
             st.text_input("Paslaugos kodas (35.0)")
             st.selectbox("Tipas (36.0)", [1, 2, 3, 5])
@@ -129,14 +172,12 @@ with st.form("pretty_medical_form"):
             st.number_input("Bendra suma balais (62.0)")
             st.text_input("Atsakingasis asmuo (65.0)")
 
-    # Bottom Submit
     st.markdown("---")
     submitted = st.form_submit_button("📁 Išsaugoti skaitmeninį įrašą")
 
 if submitted:
     st.balloons()
-    st.success("Formos duomenys sėkmingai išsaugoti sistemoje.")
+    st.success("Formos duomenys sėkmingai išsaugoti DB.")
 
-with st.expander("ℹ️ Pagalba ir Kodų Reikšmės"):
-    st.write("**36 skiltis:** 1-PSP specialistas, 2-Konsultantas (1-as vizitas), 3-Konsultantas (tęstinis), 5-Mokama.")
-    st.write("**40 skiltis:** 1-Gydymas baigtas, 6-Siuntimas stacionarui, 99-Mirtis.")
+with st.expander("ℹ️ Pagalba"):
+    st.write("**36 skiltis:** 1-PSP, 2-Konsultantas (1-as), 3-Konsultantas (tęstinis), 5-Mokama.")
