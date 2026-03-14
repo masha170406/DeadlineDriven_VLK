@@ -11,7 +11,6 @@ if "current_user" not in st.session_state:
     st.session_state["current_user"] = "Dr. Jonas Gydytojas"
 
 # --- SESSION STATE ---
-# Updated to include reasoning and confidence score
 if "field_data" not in st.session_state:
     st.session_state["field_data"] = {
         "vardas": "",
@@ -26,7 +25,9 @@ if "field_data" not in st.session_state:
         "paaiskinimas": "",
     }
 
-st.set_page_config(page_title="Digital F025/a-LK Form", page_icon="🏥", layout="wide")
+st.set_page_config(
+    page_title="NotaMeda | Digital F025/a-LK", page_icon="🏥", layout="wide"
+)
 
 st.markdown(
     """
@@ -36,6 +37,19 @@ st.markdown(
     h1, h2, h3 { color: #1c3d5a; }
     .stButton>button { width: 100%; background-color: #007bff; color: white; border-radius: 5px; height: 3em; font-weight: bold;}
     .section-header { margin-top: 2rem; margin-bottom: 1rem; color: #007bff; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem;}
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: white;
+        color: #6c757d;
+        text-align: center;
+        padding: 10px 0;
+        border-top: 1px solid #e9ecef;
+        font-size: 0.9rem;
+    }
+    .footer a { color: #007bff; text-decoration: none; font-weight: bold; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -43,8 +57,8 @@ st.markdown(
 
 cols = st.columns([3, 1])
 with cols[0]:
-    st.title("🏥 AI Apsilankymų Statistinė Kortelė")
-    st.caption("Forma Nr. 025/a-LK | Unified Dashboard")
+    st.title("🏥 NotaMeda")
+    st.caption("Forma Nr. 025/a-LK | AI Apsilankymų Statistinė Kortelė")
 with cols[1]:
     st.info(f"👤 Prisijungta: **{st.session_state['current_user']}**")
 
@@ -82,7 +96,6 @@ with st.container():
                         if key in st.session_state["field_data"]:
                             st.session_state["field_data"][key] = extracted[key]
 
-                    # --- NEW: Auto-calculate Birthdate and Gender ---
                     ak = st.session_state["field_data"].get("asm_kodas", "")
                     if ak:
                         b_date, gender = parse_asmens_kodas(ak)
@@ -90,7 +103,6 @@ with st.container():
                             st.session_state["field_data"]["gimimo_data"] = b_date
                         if gender:
                             st.session_state["field_data"]["lytis"] = gender
-                    # ------------------------------------------------
 
                     st.success(
                         "Forma sėkmingai užpildyta! Peržiūrėkite duomenis žemiau."
@@ -117,14 +129,12 @@ with st.form("pretty_medical_form"):
         st.text_input(
             "Pavardė (11.0)", value=st.session_state["field_data"].get("pavarde", "")
         )
-        # Updated Birthdate field
         st.date_input(
             "Gimimo data",
             value=st.session_state["field_data"].get("gimimo_data", None),
             format="YYYY-MM-DD",
         )
     with a3:
-        # Updated Gender field
         gender_val = st.session_state["field_data"].get("lytis", "Vyras")
         st.radio(
             "Lytis",
@@ -141,14 +151,12 @@ with st.form("pretty_medical_form"):
         unsafe_allow_html=True,
     )
 
-    # --- CONFIDENCE METRICS DISPLAY ---
     confidence = st.session_state["field_data"].get("pasitikejimo_lygis", 0)
     reasoning = st.session_state["field_data"].get("paaiskinimas", "")
 
     if confidence > 0:
         c1, c2 = st.columns([1, 3])
         with c1:
-            # Color code the metric based on confidence
             if confidence >= 85:
                 color = "green"
             elif confidence >= 60:
@@ -163,8 +171,7 @@ with st.form("pretty_medical_form"):
             st.progress(confidence / 100.0)
         with c2:
             st.info(f"**AI Analizė:** {reasoning}")
-        st.write("")  # Spacer
-    # ---------------------------------
+        st.write("")
 
     m1, m2 = st.columns(2)
     with m1:
@@ -222,3 +229,13 @@ with st.form("pretty_medical_form"):
 if submitted:
     st.balloons()
     st.success("Formos duomenys sėkmingai išsaugoti DB.")
+
+# --- FOOTER ---
+st.markdown(
+    """
+    <div class="footer">
+        NotaMeda © 2026 | Find us on <a href="https://github.com/masha170406/DeadlineDriven_VLK" target="_blank">GitHub</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
