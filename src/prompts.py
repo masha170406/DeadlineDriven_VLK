@@ -13,13 +13,10 @@ Pateikti ACHI intervencijų kodai:
 {achi_context}
 
 GRIEŽTOS KODAVIMO TAISYKLĖS:
-1. JOKIŲ HALIUCINACIJŲ: TLK ir ACHI kodams JUMS LEIDŽIAMA naudoti TIK tuos kodus ir pavadinimus, kurie pateikti "LEISTINŲ KODŲ DUOMENŲ BAZĖJE".
-2. TRŪKSTAMI DUOMENYS: Jei gydytojo užrašuose nėra informacijos, kuri atitiktų duomenų bazės kodus, privalote palikti lauką tuščią (""). Nekurkite savo kodų.
-3. DIAGNOZĖS STATUSAS: 
-    - "+" (Ūminė / pirma kartą gyvenime)
-    - "-" (Lėtinė / pirma kartą šiais metais)
-    - "0" (Lėtinė / žinoma iš anksčiau). 
-    - Jei neaišku, naudokite "+".
+1. JOKIŲ HALIUCINACIJŲ: Paprastai JUMS LEIDŽIAMA naudoti TIK tuos kodus, kurie pateikti "LEISTINŲ KODŲ DUOMENŲ BAZĖJE".
+2. GYDYTOJO VIRŠENYBĖS TAISYKLĖ (OVERRIDE): Jei gydytojas savo užrašuose AIŠKIAI IR TIKSLIAI parašė specifinį TLK-10-AM kodą (pvz., "H52.1") arba ACHI kodą, JŪS PRIVALOTE naudoti gydytojo parašytą kodą, net jei jo nėra RAG duomenų bazės sąraše!
+3. TRŪKSTAMI DUOMENYS: Jei užrašuose nėra kodo ir joks kodas iš duomenų bazės netinka, palikite lauką tuščią ("").
+4. DIAGNOZĖS STATUSAS: Naudokite "+" (ūminė), "-" (lėtinė), arba "0" (sena lėtinė). Jei neaišku, naudokite "+".
 
 IŠVESTIES FORMATAS (GRIEŽTAS JSON):
 Privalote atsakyti TIK grynu JSON formatu, be jokių markdown blokų (```json) ar papildomo teksto.
