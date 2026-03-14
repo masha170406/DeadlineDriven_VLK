@@ -8,6 +8,9 @@ from prompts import VLK_SYSTEM_PROMPT
 
 load_dotenv()
 
+TEMPERATURE = 0.0
+SEED = 0
+
 
 # --- 1. LLM-AGNOSTIC EMBEDDING FUNCTION ---
 class LiteLLMEmbeddingFunction(EmbeddingFunction):
@@ -70,6 +73,8 @@ def get_ai_extraction_with_rag(doctor_note, text_model="mistral/mistral-large-la
             model=text_model,
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
+            temperature=TEMPERATURE,
+            seed=SEED,
         )
         raw_content = response.choices[0].message.content.strip()
         return json.loads(raw_content)
