@@ -217,7 +217,7 @@ with st.form("pretty_medical_form"):
         )
 
     st.markdown("---")
-    submitted = st.form_submit_button("📁 Išsaugoti ir siųsti į E.sveikatą")
+    submitted = st.form_submit_button("📁 Išsaugoti ir nusiųsti į sistemą")
 
 if submitted:
     st.balloons()
