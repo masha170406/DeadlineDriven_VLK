@@ -10,6 +10,7 @@ load_dotenv()
 
 TEMPERATURE = 0.0
 SEED = 0
+N_RESULTS_RAG = 10
 
 
 # --- 1. LLM-AGNOSTIC EMBEDDING FUNCTION ---
@@ -59,8 +60,12 @@ def get_ai_extraction_with_rag(doctor_note, text_model="mistral/mistral-large-la
     tlk_coll, achi_coll = get_chroma_collections()
 
     # 1. RETRIEVE
-    tlk_context = retrieve_relevant_codes(doctor_note, tlk_coll, n_results=3)
-    achi_context = retrieve_relevant_codes(doctor_note, achi_coll, n_results=3)
+    tlk_context = retrieve_relevant_codes(
+        doctor_note, tlk_coll, n_results=N_RESULTS_RAG
+    )
+    achi_context = retrieve_relevant_codes(
+        doctor_note, achi_coll, n_results=N_RESULTS_RAG
+    )
 
     # 2. AUGMENT (Format the imported prompt)
     prompt = VLK_SYSTEM_PROMPT.format(
